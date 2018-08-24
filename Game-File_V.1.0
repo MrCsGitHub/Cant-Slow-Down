@@ -1,0 +1,366 @@
+#sets up the variables and the display
+import pygame
+import random
+import time
+import math
+
+pygame.init()
+
+display_width = 1920
+display_height = 970
+white = (255, 255, 255)
+black = (0, 0, 0)
+red = (255, 0, 0)
+blue = (0, 0, 255)
+grey = (105, 105, 105)
+
+gameDisplay = pygame.display.set_mode((display_width, display_height), pygame.FULLSCREEN)
+pygame.display.set_caption("Can't Slow Down")
+clock = pygame.time.Clock()
+#function to write stuff on the screen
+def write(message, location, size, color):
+    font = pygame.font.SysFont(None, size)
+    text = font.render(message, True, color)
+    gameDisplay.blit(text, location)
+
+
+#loop for the main menu
+def UI_loop():
+    global in_game
+    global difficulty
+    difficulty = 2
+    while True:
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_RETURN]:
+            game_loop()
+        if keys[pygame.K_d]:
+            set_difficulty_loop()
+        for event in pygame.event.get(): #while this loop may seem unnesecary, removing it breaks the program horribly, so it will stay.
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    quit()
+        gameDisplay.fill(white)
+        write("Can't Slow Down", (625, 200), 100, black)
+        write("Press Enter to Start", (750, 400), 50, black)
+        write("Press Esc to Quit", (775, 500), 50, black)
+        write("Press d to set difficulty", (730, 600), 50, black)
+        pygame.display.update()
+        clock.tick(30)
+
+#loop for the set difficulty screen
+def set_difficulty_loop():
+    global difficulty
+    difficulty = 2 #difficulty determines how many lasers you can fire per blue wall/zapper
+    set = False
+    while not set:
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_h]:
+            set = True
+            difficulty = 1
+        if keys[pygame.K_m]:
+            set = True
+            difficulty = 2
+        if keys[pygame.K_e]:
+            set = True
+            difficulty = 3
+        for event in pygame.event.get(): #while this loop may seem unnesecary, removing it breaks the program horribly, so it will stay.
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    set = True
+        gameDisplay.fill(white)
+        write("Press h for hard", (800, 400), 50, black)
+        write("Press m for medium", (775, 500), 50, black)
+        write("Press e for easy", (800, 600), 50, black)
+        pygame.display.update()
+        clock.tick(30)
+
+
+#the cube that the player controls
+class player:
+    def __init__(self, x_pos, y_pos, width, height, acceleration, direction, ammo):
+        self.x_pos = x_pos
+        self.y_pos = y_pos
+        self.width = width
+        self.height = height
+        self.acceleration = acceleration
+        self.direction = direction
+        self.ammo = ammo
+    def move(self):
+        if self.direction == "down" and self.acceleration < 15:
+            self.acceleration += 0.5
+        elif self.direction == "up" and self.acceleration > -15:
+            self.acceleration -= 0.5
+        self.y_pos += self.acceleration
+    def display(self):
+        pygame.draw.rect(gameDisplay, black, (self.x_pos, self.y_pos, self.width, self.height))
+    def check_collision_sides(self):
+        if self.y_pos + self.height > 720:
+            self.y_pos = 720 - self.height
+            self.acceleration = 0
+            self.direction = "none"
+        elif self.y_pos < 250:
+            self.y_pos = 250
+            self.acceleration = 0
+            self.direction = "none"
+    def check_collision_zapper(self):
+        global obstacles
+        global zapped
+        for each_obstacle in obstacles:
+            if each_obstacle.name == "zapper":
+                if each_obstacle.x_pos <= self.x_pos + self.width:
+                    write("You lost!", (1000, 500), 100, black)
+                    pygame.display.update()
+                    time.sleep(2)
+                    zapped = True
+    def check_collision_wall(self):
+        global obstacles
+        global zapped
+        global score
+        for each_obstacle in obstacles:
+            if each_obstacle.name == "wall":
+                if each_obstacle.x_pos <= self.x_pos + self.width and each_obstacle.x_pos >= self.x_pos:
+                    if self.y_pos + self.height > each_obstacle.start_y and self.y_pos < each_obstacle.end_y + 20:
+                        write("You lost!", (1000, 500), 100, black)
+                        pygame.display.update()
+                        time.sleep(2)
+                        zapped = True
+    def fire_laser(self):
+        global lasers
+        if self.ammo > 0:
+            lasers.append(laser(self.x_pos, self.y_pos + self.width/2, 20, 10))
+            self.ammo -= 1
+
+
+#individual pixel_objects that trail behind the player
+class new_pixel_object:
+    def __init__(self, x_pos, y_pos, color, size):
+        self.x_pos = x_pos
+        self.y_pos = y_pos
+        self.color = color
+        self.size = size
+        self.lifespan = 0
+    
+    def move(self):
+        global new_zapper
+        
+        self.x_pos -= new_zapper_speed #actual movement
+        
+        #changes the color of the pixels as they trail behind
+        if self.color[0] < 255:
+            self.color = (self.color[0]+15, self.color[1]+5, self.color[2]+5) #IMPORTANT: Keep the constant addends as factors of 255, otherwise code will break.
+        elif self.color[1] < 255:
+            self.color = (self.color[0], self.color[1]+5, self.color[2]+5) #IMPORTANT: Keep the constant addends as factors of 255, otherwise code will break.
+        
+        #changes the size of the pixels as they trail behind
+        self.lifespan += 1
+        if math.floor(self.lifespan/15): #Don't do this every loop, only once every 20 loops.
+            if self.size != 0:
+                self.size -= 1
+            self.lifespan = 0 #reset the counter
+    
+    def display(self):
+        pygame.draw.rect(gameDisplay, self.color, (self.x_pos, self.y_pos, self.size, self.size))
+
+
+#the lasers that the player fires
+class laser:
+    def __init__(self, x_pos, y_pos, width, height):
+        self.x_pos = x_pos
+        self.y_pos = y_pos
+        self.width = width
+        self.height = height
+        self.color = grey
+    
+    def move(self):
+        self.x_pos += 15
+        
+        if self.color[0] < 255:
+            self.color = (self.color[0] + 15, self.color[1], self.color[2])
+        if self.color[1] > 75:
+            self.color = (self.color[0], self.color[1] - 5, self.color[2])
+        elif self.color[1] < 255:
+            self.color = (self.color[0], self.color[1] + 30, self.color[2])
+        if self.color[2] > 0:
+            self.color = (self.color[0], self.color[1], self.color[2] - 5)
+        
+    def display(self):
+        pygame.draw.rect(gameDisplay, self.color, (self.x_pos, self.y_pos, self.width, self.height))
+    
+    def check_hit(self):
+        global new_zapper_speed
+        global obstacles
+        global difficulty
+        global score
+        global lasers
+        for each_obstacle in obstacles:
+            if each_obstacle.name == "zapper":
+                if self.x_pos >= each_obstacle.x_pos:
+                    if self.y_pos + self.height > each_obstacle.hit_box_y and self.y_pos < each_obstacle.hit_box_y + each_obstacle.hit_box_width:
+                        obstacles.remove(each_obstacle)
+                        lasers.remove(self)
+                        
+    def check_off_screen(self):
+        global lasers
+        if self.x_pos > display_width:
+            lasers.remove(self)
+
+#the blue wall moving towards the player with the black deactivation button
+class zapper:
+    def __init__(self, name, x_pos, hit_box_y, hit_box_width, speed):
+        self.name = name
+        self.x_pos = x_pos
+        self.hit_box_y = hit_box_y
+        self.hit_box_width = hit_box_width
+        self.speed = speed
+    def move(self):
+        self.x_pos -= self.speed
+    def display(self):
+        pygame.draw.rect(gameDisplay, blue, (self.x_pos, 250, 20, 470))
+        pygame.draw.rect(gameDisplay, black, (self.x_pos - 5, self.hit_box_y, 30, self.hit_box_width))
+
+class wall:
+    def __init__(self, name, x_pos, start_y, end_y, speed):
+        self.name = name
+        self.x_pos = x_pos
+        self.start_y = start_y
+        self.end_y = end_y
+        self.speed = speed
+    def move(self):
+        self.x_pos -= self.speed
+    def display(self):
+        pygame.draw.rect(gameDisplay, blue, (self.x_pos, self.start_y, 20, self.end_y - self.start_y))
+        pygame.draw.rect(gameDisplay, black, (self.x_pos, self.start_y, 20, 20))
+        pygame.draw.rect(gameDisplay, black, (self.x_pos, self.end_y, 20, 20))
+
+#handles the key presses of the player
+def handle_inputs():
+    global zapped
+    global new_player
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            quit()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                zapped = True
+            if event.key == pygame.K_SPACE:
+                new_player.fire_laser()
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_w]:
+        new_player.direction = "up"
+    if keys[pygame.K_s]:
+        new_player.direction = "down"
+
+#checks for collisions between objects and acts accordingly
+def handle_events():
+    global new_player
+    global lasers
+    global obstacles
+    global new_zapper_speed
+    global new_obstacle_type
+    global new_obstacle_ticker
+    global score
+    global pixel_trail
+    new_player.check_collision_sides()
+    new_player.check_collision_wall()
+    new_player.check_collision_zapper()
+    for each_laser in lasers:
+        each_laser.check_hit()
+    for each_laser in lasers:
+        each_laser.check_off_screen()
+    new_obstacle_ticker += 1
+    if new_obstacle_ticker >= 1000 / new_zapper_speed:
+        new_obstacle_ticker = 0
+        score += 1
+        if new_obstacle_type == "zapper":
+            new_obstacle_type = "wall"
+        elif new_obstacle_type == "wall":
+            new_obstacle_type = "zapper"
+        if new_zapper_speed < 20:
+            new_zapper_speed += 0.125
+        if new_obstacle_type == "zapper":
+            new_player.ammo += difficulty
+            obstacles.append(zapper("zapper", display_width, random.randint(250, 680), 40, new_zapper_speed))
+        elif new_obstacle_type == "wall":
+            obstacles.append(wall("wall", display_width, random.randint(275, 400), random.randint(510, 635), new_zapper_speed))
+    for each_pixel in pixel_trail:
+        if each_pixel.x_pos < 0:
+            pixel_trail.remove(each_pixel)
+
+#creates the pixel trail behind the player
+def create_pixel_trail():
+    global pixel_trail
+    global new_player
+    pixel_trail.append(new_pixel_object(new_player.x_pos + random.randint(-10, 10), new_player.y_pos + random.randint(-10, 10), black, 5))
+
+#moves the objects
+def move_objects():
+    global new_player
+    global lasers
+    global obstacles
+    global pixel_trail
+    new_player.move()
+    for each_laser in lasers:
+        each_laser.move()
+    for each_obstacle in obstacles:
+        each_obstacle.move()
+    for each_pixel in pixel_trail:
+        each_pixel.move()
+
+#displays the objects on the screen
+def display_objects():
+    global new_player
+    global lasers
+    global obstacles
+    global pixel_trail
+    global score
+    gameDisplay.fill(white)
+    pygame.draw.rect(gameDisplay, black, (0, 0, 1920, 250))
+    pygame.draw.rect(gameDisplay, black, (0, 720, 1920, 250))
+    new_player.display()
+    for each_laser in lasers:
+        each_laser.display()
+    for each_obstacle in obstacles:
+        each_obstacle.display()
+    for each_pixel in pixel_trail:
+        each_pixel.display()
+    write("Ammo: "+str(new_player.ammo), (15, 265), 50, black)
+    write("Score: "+str(score), (15, 665), 50, black)
+    pygame.display.update()
+
+#main game loop
+def game_loop():
+    global difficulty
+    global score
+    global zapped
+    global lasers
+    global obstacles
+    global new_obstacle_ticker
+    global new_obstacle_type
+    global new_zapper_speed
+    global new_zapper
+    global new_player
+    global pixel_trail
+    score = 0
+    zapped = False
+    lasers = []
+    obstacles = []
+    new_obstacle_ticker = 0
+    new_obstacle_type = "zapper"
+    new_zapper_speed = 10
+    obstacles.append(zapper("zapper", display_width, random.randint(250, 680), 40, new_zapper_speed))
+    new_player = player(display_width * 0.3, display_height * 0.5, 25, 25, 0, "none", difficulty)
+    pixel_trail = []
+
+    while not zapped:
+        handle_inputs()
+        handle_events()
+        create_pixel_trail()
+        move_objects()
+        display_objects()
+        clock.tick(30)
+
+UI_loop()
+pygame.quit()
+quit()

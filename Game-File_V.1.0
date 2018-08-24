@@ -1,4 +1,11 @@
-#sets up the variables and the display
+#----------------------------------------------------------------------#
+#Read the Readme for more info
+#License is MIT Open Source
+#Credit in order of biggest contribution:
+#Code By Cameron Dolbow, Chandan Sankar
+#Art By Chandan Sankar, Cameron Dolbow
+#Testing By (no order) Cameron Dolbow, Chandan Sankar, Caleb Hamilton
+#----------------------------------------------------------------------#
 import pygame
 import random
 import time
@@ -6,18 +13,21 @@ import math
 from sys import platform
 
 pygame.init()
-
+#the display width and height #TODO: add functionality for multiple displays that are different sizes
 display_width = 1920
 display_height = 970
+
+#colors used throughout the game
 white = (255, 255, 255)
 black = (0, 0, 0)
 red = (255, 0, 0)
 blue = (0, 0, 255)
 grey = (105, 105, 105)
 
+#sets up the game display surface using display width and height, gameDisplay will be referenced later as this
 gameDisplay = pygame.display.set_mode((display_width, display_height), pygame.FULLSCREEN)
 pygame.display.set_caption("Can't Slow Down")
-clock = pygame.time.Clock()
+clock = pygame.time.Clock() #the clock that the game runs on
 
 
 #function to write stuff on the screen
@@ -25,11 +35,11 @@ def write(message, location, size, color):
     if platform.startswith('win') or platform.startswith('cyg'): #Windows OSes get Calibri
         font = pygame.font.SysFont('Calibri', size)
     elif platform.startswith('linux'): #Linux OSes gets Lato
-        font = pygame.font.SysFont('Lato Medium', size)
+        font = pygame.font.SysFont('Lato', size)
     else: #Mac and everything else gets the pygame default     ###TODO: Add appropriate fonts for each OS
         font = pygame.font.SysFont(None, size)
-    text = font.render(message, True, color)
-    gameDisplay.blit(text, location)
+    text = font.render(message, True, color) #renders the font as text
+    gameDisplay.blit(text, location) #puts the text on the screen
 
 
 #loop for the main menu

@@ -2,7 +2,7 @@
 #Read the Readme for more info
 #License is MIT Open Source
 #Credit in order of biggest contribution:
-#Code By Cameron Dolbow, Chandan Sankar
+#Code By Cameron Dolbow, Chandan Sankar, Caleb Hamilton
 #Art By Chandan Sankar, Cameron Dolbow
 #Testing By (no order) Cameron Dolbow, Chandan Sankar, Caleb Hamilton
 #======================================================================#
@@ -52,27 +52,27 @@ def write(message, location, size, color):
 def UI_loop():
     global in_game
     global difficulty #difficulty determines how many lasers you can fire per blue wall/zapper
-    difficulty = 2 #default difficulty is medium
+    difficulty = 2 #default difficulty is medium, easy: difficulty = 3, hard: difficulty = 1
     while True:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_RETURN]:
-            game_loop()
+            game_loop() #enters into the game when the player presses the enter key
         if keys[pygame.K_d]:
-            set_difficulty_loop()
+            set_difficulty_loop() #switches the screen to show the difficulties when the player presses the d key
         for event in pygame.event.get(): #DO NOT REMOVE OR EVERYTHING BREAKS HORRIBLY
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
-                    quit()
-        
-        gameDisplay.fill(white)
-        
-        #TODO: Update the positioning of these texts to make them display nicely on other displays
+                    quit() #quits the game when the player hits Esc
+
+        gameDisplay.fill(white) #draws the background
+
+        #displays the text on the screen#TODO: Update the positioning of these texts to make them display nicely on other displays
         write("Can't Slow Down", (625, 200), 100, black)
         write("Press Enter to Start", (750, 400), 50, black)
         write("Press Esc to Quit", (775, 500), 50, black)
         write("Press d to set difficulty", (730, 600), 50, black)
-        
+
         pygame.display.update()
         clock.tick(30)
 
@@ -81,30 +81,30 @@ def UI_loop():
 def set_difficulty_loop():
     global difficulty
     set = False
-    
-    while not set:
+
+    while not set: #once the difficulty is chosen, the loop exits, returning to the UI loop
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_h]:
+        if keys[pygame.K_h]: #pressing h sets the difficulty to hard
             set = True
             difficulty = 1
-        if keys[pygame.K_m]:
+        if keys[pygame.K_m]: #pressing m = medium
             set = True
             difficulty = 2
-        if keys[pygame.K_e]:
+        if keys[pygame.K_e]: #pressing e = easy
             set = True
             difficulty = 3
-    
+
         for event in pygame.event.get(): #DO NOT REMOVE OR EVERYTHING BREAKS HORRIBLY
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                if event.key == pygame.K_ESCAPE: #returns to the UI loop if the player chooses to hit Esc
                     set = True
-        
-        gameDisplay.fill(white)
-        
+
+        gameDisplay.fill(white) #background
+        #displays the text
         write("Press h for hard", (800, 400), 50, black)
         write("Press m for medium", (775, 500), 50, black)
         write("Press e for easy", (800, 600), 50, black)
-        
+
         pygame.display.update()
         clock.tick(30)
 
@@ -112,66 +112,61 @@ def set_difficulty_loop():
 #the cube that the player controls
 class player:
     def __init__(self, x_pos, y_pos, width, height, acceleration, direction, ammo):
-        self.x_pos = x_pos
+        self.x_pos = x_pos #x and y positions are at the top left hand corner of the player, so to find the center use width and height divided by 2
         self.y_pos = y_pos
         self.width = width
         self.height = height
-        self.acceleration = acceleration
-        self.direction = direction
-        self.ammo = ammo
-    
+        self.acceleration = acceleration #the player naturally accelerates when switching directions, but will also have to decelerate from its previous direction
+        self.direction = direction #can be either up or down
+        self.ammo = ammo #how many lasers the player can fire
+
     def move(self):
-        if self.direction == "down" and self.acceleration < 15:
+        if self.direction == "down" and self.acceleration < 15: #caps acceleration at 15 to make the game more balanced
             self.acceleration += 0.5
         elif self.direction == "up" and self.acceleration > -15:
             self.acceleration -= 0.5
-        self.y_pos += self.acceleration
-    
-    def display(self):
+        self.y_pos += self.acceleration #adds the acceleration to the y position
+
+    def display(self): #displays the character on screen #TODO make the sprite look better
         pygame.draw.rect(gameDisplay, black, (self.x_pos, self.y_pos, self.width, self.height))
-    
-    def check_collision_sides(self):
-        if self.y_pos + self.height > 710:
-            self.y_pos = 710 - self.height
-            self.acceleration = 0
-            self.direction = "none"
-        elif self.y_pos < 250:
+
+    def check_collision_sides(self): #when the player hits the top or bottom of the screen, they will automatically decelerate and remain still until they go the other direction
+        if self.y_pos + self.height > 710: #checks if off the screen
+            self.y_pos = 710 - self.height #returns the player to the edge of the screen if they clipped through it
+            self.acceleration = 0 #makes sure that the player remains still
+            self.direction = "none" #makes sure that the player reamins still
+        elif self.y_pos < 250: #does the same for the other side
             self.y_pos = 250
             self.acceleration = 0
             self.direction = "none"
-    
-    def check_collision_zapper(self):
+
+    def check_collision_zapper(self): #checks if the player collides with one of the blue zappers
         global obstacles
         global zapped
-        for each_obstacle in obstacles:
-            if each_obstacle.name == "zapper":
-                if each_obstacle.x_pos <= self.x_pos + self.width:
+        for each_obstacle in obstacles: #checks for each obstacle, since there is typically 2 on the screen at a time
+            if each_obstacle.name == "zapper": #if the obstacle is the one that spans the entire screen
+                if each_obstacle.x_pos <= self.x_pos + self.width: #checks if the player hit it
                     write("You lost!", (1000, 500), 100, black)
                     pygame.display.update()
                     time.sleep(2)
-                    zapped = True
-    
-    def check_collision_wall(self):
-        global obstacles
-        global zapped
-        global score
-        for each_obstacle in obstacles:
-            if each_obstacle.name == "wall":
-                if each_obstacle.x_pos <= self.x_pos + self.width and each_obstacle.x_pos >= self.x_pos:
-                    if self.y_pos + self.height > each_obstacle.start_y and self.y_pos < each_obstacle.end_y + 20:
+                    zapped = True #zapped exits the game loop when set to true
+            if each_obstacle.name == "wall": #if the obstacle is the one that is only part of the screen
+                if each_obstacle.x_pos <= self.x_pos + self.width and each_obstacle.x_pos >= self.x_pos: #checks if the player hit it on the x axis
+                    if self.y_pos + self.height > each_obstacle.start_y and self.y_pos < each_obstacle.end_y + 20: #checks if the player hit it on the y axis
                         write("You lost!", (1000, 500), 100, black)
                         pygame.display.update()
                         time.sleep(2)
                         zapped = True
-    
-    def fire_laser(self):
+
+    def fire_laser(self): #will be run when the player hits space
         global lasers
-        if self.ammo > 0:
-            lasers.append(laser(self.x_pos, self.y_pos + self.width/2, 20, 10))
-            self.ammo -= 1
+        if self.ammo > 0: #checks to make sure the player has ammo
+            lasers.append(laser(self.x_pos, self.y_pos + self.width/2, 20, 10)) #makes a new laser object and adds it to the lasers list
+            self.ammo -= 1 #reduces the player's ammo by one
 
 
 #individual pixel_objects that trail behind the player
+#serves multiple purposes in the game design, creates illusion that the player is propelling forward, and shows the player how the spaceship arcs when accelerating/deccelerating
 class new_pixel_object:
     def __init__(self, x_pos, y_pos, color, size):
         self.x_pos = x_pos
@@ -179,41 +174,41 @@ class new_pixel_object:
         self.color = color
         self.size = size
         self.lifespan = 0 #doesn't need to take a init value, but every individual pixel needs one counter of its own
-    
+
     def move(self):
         global new_zapper
-        
+
         self.x_pos -= new_zapper_speed #actual movement
-        
+
         #changes the color of the pixels as they trail behind
         if self.color[0] < 255:
             self.color = (self.color[0]+15, self.color[1]+5, self.color[2]+5) #IMPORTANT: Keep the constant addends as factors of 255, otherwise code will break.
         elif self.color[1] < 255:
             self.color = (self.color[0], self.color[1]+5, self.color[2]+5) #IMPORTANT: Keep the constant addends as factors of 255, otherwise code will break.
-        
+
         #changes the size of the pixels as they trail behind
         self.lifespan += 1
         if math.floor(self.lifespan/15): #Don't do this every loop, only once every 20 loops.
             if self.size != 0:
                 self.size -= 1
             self.lifespan = 0 #reset the counter
-    
+
     def display(self):
         pygame.draw.rect(gameDisplay, self.color, (self.x_pos, self.y_pos, self.size, self.size))
 
 
 #the lasers that the player fires
 class laser:
-    def __init__(self, x_pos, y_pos, width, height):
+    def __init__(self, x_pos, y_pos, width, height): #width and height are used to check if the laser hit something, but may not be entirely accurate on how the sprite looks
         self.x_pos = x_pos
         self.y_pos = y_pos
         self.width = width
         self.height = height
         self.color = grey
-    
+
     def move(self):
-        self.x_pos += 15
-        
+        self.x_pos += 15 #moves about as fast as the oncoming walls, but in the opposite direction.
+        #this whole thing down here changes the color based on how far it is from the player, a cooldown effect, if you will.
         if self.color[0] < 255:
             self.color = (self.color[0] + 15, self.color[1], self.color[2])
         if self.color[1] > 75:
@@ -222,55 +217,52 @@ class laser:
             self.color = (self.color[0], self.color[1] + 30, self.color[2])
         if self.color[2] > 0:
             self.color = (self.color[0], self.color[1], self.color[2] - 5)
-        
-    def display(self):
+
+    def display(self): #displays a small red rectangle
         pygame.draw.rect(gameDisplay, self.color, (self.x_pos, self.y_pos, self.width, self.height))
-    
-    def check_hit(self):
-        global new_zapper_speed
+
+    def check_hit(self): #checks if the laser hit a target on a zapper
         global obstacles
-        global difficulty
-        global score
         global lasers
         for each_obstacle in obstacles:
             if each_obstacle.name == "zapper":
-                if self.x_pos >= each_obstacle.x_pos:
-                    if self.y_pos + self.height > each_obstacle.hit_box_y and self.y_pos < each_obstacle.hit_box_y + each_obstacle.hit_box_width:
-                        obstacles.remove(each_obstacle)
+                if self.x_pos >= each_obstacle.x_pos: #checks x cooridinates
+                    if self.y_pos + self.height > each_obstacle.hit_box_y and self.y_pos < each_obstacle.hit_box_y + each_obstacle.hit_box_width: #checks y cooridinates
+                        obstacles.remove(each_obstacle) #removes the obstacle and the laser
                         lasers.remove(self)
-                        
-    def check_off_screen(self):
+
+    def check_off_screen(self): #if the misses everything and traveles the length of the screen, it is removed
         global lasers
         if self.x_pos > display_width:
             lasers.remove(self)
 
 #the blue wall moving towards the player with the black deactivation button
 class zapper:
-    def __init__(self, name, x_pos, hit_box_y, hit_box_width, speed):
+    def __init__(self, name, x_pos, hit_box_y, hit_box_width, speed): #hit box is the black box that lasers have to hit to destroy
         self.name = name
         self.x_pos = x_pos
         self.hit_box_y = hit_box_y
         self.hit_box_width = hit_box_width
         self.speed = speed
     def move(self):
-        self.x_pos -= self.speed
+        self.x_pos -= self.speed #speed is determined by how far the player is in the game, farther = faster
     def display(self):
-        pygame.draw.rect(gameDisplay, blue, (self.x_pos, 250, 20, 470))
-        pygame.draw.rect(gameDisplay, black, (self.x_pos - 5, self.hit_box_y, 30, self.hit_box_width))
-
+        pygame.draw.rect(gameDisplay, blue, (self.x_pos, 250, 20, 470)) #draws the blue bar
+        pygame.draw.rect(gameDisplay, black, (self.x_pos - 5, self.hit_box_y, 30, self.hit_box_width)) #draws the black box
+#the blue wall that only covers part of the screen and is supposed to be avoided instead of shot (cannot actually be shot)
 class wall:
-    def __init__(self, name, x_pos, start_y, end_y, speed):
+    def __init__(self, name, x_pos, start_y, end_y, speed): #start and end y determine how large the thing is
         self.name = name
         self.x_pos = x_pos
         self.start_y = start_y
         self.end_y = end_y
         self.speed = speed
     def move(self):
-        self.x_pos -= self.speed
+        self.x_pos -= self.speed #speed increases as game progresses just like the other wall
     def display(self):
-        pygame.draw.rect(gameDisplay, blue, (self.x_pos, self.start_y, 20, self.end_y - self.start_y))
-        pygame.draw.rect(gameDisplay, black, (self.x_pos, self.start_y, 20, 20))
-        pygame.draw.rect(gameDisplay, black, (self.x_pos, self.end_y, 20, 20))
+        pygame.draw.rect(gameDisplay, blue, (self.x_pos, self.start_y, 20, self.end_y - self.start_y)) #draws the blue bar
+        pygame.draw.rect(gameDisplay, grey, (self.x_pos, self.start_y, 20, 20)) #adds a stub to the end of each bar
+        pygame.draw.rect(gameDisplay, grey, (self.x_pos, self.end_y, 20, 20))
 
 #handles the key presses of the player
 def handle_inputs():
@@ -302,7 +294,6 @@ def handle_events():
     global score
     global pixel_trail
     new_player.check_collision_sides()
-    new_player.check_collision_wall()
     new_player.check_collision_zapper()
     for each_laser in lasers:
         each_laser.check_hit()

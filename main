@@ -1,4 +1,15 @@
-#sets up the variables and the display
+#======================================================================#
+#Read the Readme for more info
+#License is MIT Open Source
+#Credit in order of biggest contribution:
+#Code By Cameron Dolbow, Chandan Sankar
+#Art By Chandan Sankar, Cameron Dolbow
+#Testing By (no order) Cameron Dolbow, Chandan Sankar, Caleb Hamilton
+#======================================================================#
+
+
+##Setup
+
 import pygame
 import random
 import time
@@ -6,61 +17,71 @@ import math
 from sys import platform
 
 pygame.init()
-
+#the display width and height #TODO: add functionality for multiple displays that are different sizes
 display_width = 1920
 display_height = 970
+
+#base colors used throughout the game (some are not explicitly named as they are produced by adding to the values inside the colors)
 white = (255, 255, 255)
 black = (0, 0, 0)
 red = (255, 0, 0)
 blue = (0, 0, 255)
-grey = (105, 105, 105)
+grey = (105, 105, 105) #more like a dark grey, but this is the only grey used
 
+#sets up the game display surface using display width and height, gameDisplay will be referenced later as this
 gameDisplay = pygame.display.set_mode((display_width, display_height), pygame.FULLSCREEN)
 pygame.display.set_caption("Can't Slow Down")
-clock = pygame.time.Clock()
+clock = pygame.time.Clock() #the clock that the game runs on
 
+#----------------------------------------------------------------------#
+##Definitions
 
 #function to write stuff on the screen
 def write(message, location, size, color):
     if platform.startswith('win') or platform.startswith('cyg'): #Windows OSes get Calibri
         font = pygame.font.SysFont('Calibri', size)
     elif platform.startswith('linux'): #Linux OSes gets Lato
-        font = pygame.font.SysFont('Lato Medium', size)
+        font = pygame.font.SysFont('Lato', size)
     else: #Mac and everything else gets the pygame default     ###TODO: Add appropriate fonts for each OS
         font = pygame.font.SysFont(None, size)
-    text = font.render(message, True, color)
-    gameDisplay.blit(text, location)
+    text = font.render(message, True, color) #renders the font as text
+    gameDisplay.blit(text, location) #puts the text on the screen
 
 
 #loop for the main menu
 def UI_loop():
     global in_game
-    global difficulty
-    difficulty = 2
+    global difficulty #difficulty determines how many lasers you can fire per blue wall/zapper
+    difficulty = 2 #default difficulty is medium
     while True:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_RETURN]:
             game_loop()
         if keys[pygame.K_d]:
             set_difficulty_loop()
-        for event in pygame.event.get(): #while this loop may seem unnesecary, removing it breaks the program horribly, so it will stay.
+        for event in pygame.event.get(): #DO NOT REMOVE OR EVERYTHING BREAKS HORRIBLY
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     quit()
+        
         gameDisplay.fill(white)
+        
+        #TODO: Update the positioning of these texts to make them display nicely on other displays
         write("Can't Slow Down", (625, 200), 100, black)
         write("Press Enter to Start", (750, 400), 50, black)
         write("Press Esc to Quit", (775, 500), 50, black)
         write("Press d to set difficulty", (730, 600), 50, black)
+        
         pygame.display.update()
         clock.tick(30)
+
 
 #loop for the set difficulty screen
 def set_difficulty_loop():
     global difficulty
-    difficulty = 2 #difficulty determines how many lasers you can fire per blue wall/zapper
     set = False
+    
     while not set:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_h]:
@@ -72,14 +93,18 @@ def set_difficulty_loop():
         if keys[pygame.K_e]:
             set = True
             difficulty = 3
-        for event in pygame.event.get(): #while this loop may seem unnesecary, removing it breaks the program horribly, so it will stay.
+    
+        for event in pygame.event.get(): #DO NOT REMOVE OR EVERYTHING BREAKS HORRIBLY
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     set = True
+        
         gameDisplay.fill(white)
+        
         write("Press h for hard", (800, 400), 50, black)
         write("Press m for medium", (775, 500), 50, black)
         write("Press e for easy", (800, 600), 50, black)
+        
         pygame.display.update()
         clock.tick(30)
 
@@ -94,14 +119,17 @@ class player:
         self.acceleration = acceleration
         self.direction = direction
         self.ammo = ammo
+    
     def move(self):
         if self.direction == "down" and self.acceleration < 15:
             self.acceleration += 0.5
         elif self.direction == "up" and self.acceleration > -15:
             self.acceleration -= 0.5
         self.y_pos += self.acceleration
+    
     def display(self):
         pygame.draw.rect(gameDisplay, black, (self.x_pos, self.y_pos, self.width, self.height))
+    
     def check_collision_sides(self):
         if self.y_pos + self.height > 720:
             self.y_pos = 720 - self.height
@@ -111,6 +139,7 @@ class player:
             self.y_pos = 250
             self.acceleration = 0
             self.direction = "none"
+    
     def check_collision_zapper(self):
         global obstacles
         global zapped
@@ -121,6 +150,7 @@ class player:
                     pygame.display.update()
                     time.sleep(2)
                     zapped = True
+    
     def check_collision_wall(self):
         global obstacles
         global zapped
@@ -133,6 +163,7 @@ class player:
                         pygame.display.update()
                         time.sleep(2)
                         zapped = True
+    
     def fire_laser(self):
         global lasers
         if self.ammo > 0:
@@ -147,7 +178,7 @@ class new_pixel_object:
         self.y_pos = y_pos
         self.color = color
         self.size = size
-        self.lifespan = 0
+        self.lifespan = 0 #doesn't need to take a init value, but every individual pixel needs one counter of its own
     
     def move(self):
         global new_zapper

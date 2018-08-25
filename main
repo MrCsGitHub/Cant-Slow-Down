@@ -19,7 +19,7 @@ from sys import platform
 pygame.init()
 #the display width and height #TODO: add functionality for multiple displays that are different sizes
 display_width = 1920
-display_height = 970
+display_height = 960
 
 #base colors used throughout the game (some are not explicitly named as they are produced by adding to the values inside the colors)
 white = (255, 255, 255)
@@ -131,8 +131,8 @@ class player:
         pygame.draw.rect(gameDisplay, black, (self.x_pos, self.y_pos, self.width, self.height))
     
     def check_collision_sides(self):
-        if self.y_pos + self.height > 720:
-            self.y_pos = 720 - self.height
+        if self.y_pos + self.height > 710:
+            self.y_pos = 710 - self.height
             self.acceleration = 0
             self.direction = "none"
         elif self.y_pos < 250:
@@ -356,7 +356,7 @@ def display_objects():
     global score
     gameDisplay.fill(white)
     pygame.draw.rect(gameDisplay, black, (0, 0, 1920, 250))
-    pygame.draw.rect(gameDisplay, black, (0, 720, 1920, 250))
+    pygame.draw.rect(gameDisplay, black, (0, 710, 1920, 250))
     new_player.display()
     for each_laser in lasers:
         each_laser.display()

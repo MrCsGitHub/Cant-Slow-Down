@@ -269,21 +269,21 @@ def handle_inputs():
     global zapped
     global new_player
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT: #if the player hits the x button, currently there is none #TODO: Make it not fullscreen
             pygame.quit()
             quit()
-        if event.type == pygame.KEYDOWN:
+        if event.type == pygame.KEYDOWN: #checks if the player has a key down, for some reason Esc only works in this format
             if event.key == pygame.K_ESCAPE:
-                zapped = True
-            if event.key == pygame.K_SPACE:
+                zapped = True #unlke hitting the x button, this just quits the game loop instead of the whole game
+            if event.key == pygame.K_SPACE: #space is also included in this format because it prevents unintended laser spam
                 new_player.fire_laser()
-    keys = pygame.key.get_pressed()
+    keys = pygame.key.get_pressed() #checks what keys the player has pressed at the moment
     if keys[pygame.K_w]:
-        new_player.direction = "up"
+        new_player.direction = "up" #switches gravity to up
     if keys[pygame.K_s]:
-        new_player.direction = "down"
+        new_player.direction = "down" #switches gravity to down
 
-#checks for collisions between objects and acts accordingly
+#handles any events that may occur within the game loop
 def handle_events():
     global new_player
     global lasers
@@ -293,28 +293,28 @@ def handle_events():
     global new_obstacle_ticker
     global score
     global pixel_trail
-    new_player.check_collision_sides()
-    new_player.check_collision_zapper()
+    new_player.check_collision_sides() #checks if the player has hit the top or bottom of the screen
+    new_player.check_collision_zapper() #checks if the player has collided with a zapper
     for each_laser in lasers:
-        each_laser.check_hit()
+        each_laser.check_hit() #checks if any of the lasers has hit a deactivation button on a zapper
     for each_laser in lasers:
-        each_laser.check_off_screen()
-    new_obstacle_ticker += 1
-    if new_obstacle_ticker >= 1000 / new_zapper_speed:
-        new_obstacle_ticker = 0
-        score += 1
-        if new_obstacle_type == "zapper":
-            new_obstacle_type = "wall"
-        elif new_obstacle_type == "wall":
+        each_laser.check_off_screen() #checks if any of the lasers hit the right edge of the screen
+    new_obstacle_ticker += 1 #keeps track of when a new obstacle will spawn
+    if new_obstacle_ticker >= 1000 / new_zapper_speed: #if it meets the requirements, a new obstacle will spawn
+        new_obstacle_ticker = 0 
+        score += 1 #score ticker is held in here because its the easiest place to put it, although this may lead to slightly off scores being displayed
+        if new_obstacle_type == "zapper": #if the last obstacle was a zapper (full length obstacle)...
+            new_obstacle_type = "wall" #...then the new obstacle will be a wall (part length obstacle)
+        elif new_obstacle_type == "wall": #and vice versa
             new_obstacle_type = "zapper"
-        if new_zapper_speed < 20:
+        if new_zapper_speed < 20: #increases the speed of all the obstacles, max speed 20, min speed 10, max speed reached at score 80
             new_zapper_speed += 0.125
-        if new_obstacle_type == "zapper":
-            new_player.ammo += difficulty
-            obstacles.append(zapper("zapper", display_width, random.randint(250, 680), 40, new_zapper_speed))
-        elif new_obstacle_type == "wall":
+        if new_obstacle_type == "zapper": #adds ammo based on difficulty if the next obstacle requires shooting
+            new_player.ammo += difficulty 
+            obstacles.append(zapper("zapper", display_width, random.randint(250, 680), 40, new_zapper_speed)) #adds the new obstacle to the list of obstacles
+        elif new_obstacle_type == "wall": #adds the new obstacle
             obstacles.append(wall("wall", display_width, random.randint(275, 400), random.randint(510, 635), new_zapper_speed))
-    for each_pixel in pixel_trail:
+    for each_pixel in pixel_trail: #removes pixels from the pixel trail that hit the edge of the screen
         if each_pixel.x_pos < 0:
             pixel_trail.remove(each_pixel)
 
@@ -330,13 +330,13 @@ def move_objects():
     global lasers
     global obstacles
     global pixel_trail
-    new_player.move()
+    new_player.move() #either up or down
     for each_laser in lasers:
-        each_laser.move()
+        each_laser.move() #forward
     for each_obstacle in obstacles:
-        each_obstacle.move()
+        each_obstacle.move() #backward
     for each_pixel in pixel_trail:
-        each_pixel.move()
+        each_pixel.move() #backward
 
 #displays the objects on the screen
 def display_objects():
@@ -345,22 +345,24 @@ def display_objects():
     global obstacles
     global pixel_trail
     global score
-    gameDisplay.fill(white)
-    pygame.draw.rect(gameDisplay, black, (0, 0, 1920, 250))
+    gameDisplay.fill(white) #the background 
+    pygame.draw.rect(gameDisplay, black, (0, 0, 1920, 250)) #the sides
     pygame.draw.rect(gameDisplay, black, (0, 710, 1920, 250))
-    new_player.display()
-    for each_laser in lasers:
+    new_player.display() #the player
+    for each_laser in lasers: #the lasers
         each_laser.display()
-    for each_obstacle in obstacles:
+    for each_obstacle in obstacles: #the obstacles
         each_obstacle.display()
-    for each_pixel in pixel_trail:
+    for each_pixel in pixel_trail: #the pixel trail
         each_pixel.display()
+    #ammo and score
     write("Ammo: "+str(new_player.ammo), (15, 265), 50, black)
     write("Score: "+str(score), (15, 665), 50, black)
     pygame.display.update()
 
 #main game loop
 def game_loop():
+    #defines all the variables used in the game loop and allows other functions to access them
     global difficulty
     global score
     global zapped
@@ -384,13 +386,16 @@ def game_loop():
     pixel_trail = []
 
     while not zapped:
+        #uses all the above functions
         handle_inputs()
         handle_events()
         create_pixel_trail()
         move_objects()
         display_objects()
+        #does this 30 times a second
         clock.tick(30)
-
-UI_loop()
+        
+#actual code, not functions:
+UI_loop() #just runs the UI_loop and then quits when the player exits that.  
 pygame.quit()
 quit()
